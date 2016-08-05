@@ -1,8 +1,8 @@
 #!/usr/bin/env ipython
 import pandas as pd
 import sys
+import os
 from scipy import signal
-from os import listdir
 
 # Defaults come from TekTronix 'scope
 def filter_signal(data, nSamples = 1000, frameSize = 40e-9):
@@ -27,11 +27,14 @@ frameSize = n_samples*horiz_scale
 print "Frame size:", frameSize
 
 # Read folder names from directory
-folders = [x for x in listdir('data/' + sys.argv[1])]
-n_folders = len(folders)
-folder_count = 0
+measurements = [d for d in os.listdir('data/' + sys.argv[1] + '/') if (d[0]!='.' and (not (d.endswith('.pkl') or d.endswith('.txt'))))] # Filters out system files
+measurements = measurements[0::2]  # ignore ped files as base files
+n_measurements = len(measurements)
+measurement_count = 1
 
-for folder in folders:
+for measurement in measurements:
+    print('Run %d of %d' % (measurement_count, n_measurements))
+
     # Initialise dictionaries for producing final DataFrame
     output_dict     = {}
     output_dict_ped = {}
@@ -49,16 +52,16 @@ for folder in folders:
     index = [i * horiz_scale * 1e9 for i in range(n_samples)]  # Convert to ns
 
     # Read filenames from inner directory
-    files     = [x for x in listdir('data/' + sys.argv[1] + '/' + folder)          if x.endswith(sys.argv[2]+'.txt')]
-    files_ped = [x for x in listdir('data/' + sys.argv[1] + '/' + folder + '_ped') if x.endswith(sys.argv[2]+'.txt')]
+    files     = [x for x in os.listdir('data/' + sys.argv[1] + '/' + measurement)          if x.endswith(sys.argv[2]+'.txt')]
+    files_ped = [x for x in os.listdir('data/' + sys.argv[1] + '/' + measurement + '_ped') if x.endswith(sys.argv[2]+'.txt')]
     file_pairs = zip(files, files_ped)
     n_files = len(file_pairs)
 
     file_count = 0
     # Loop through each file_pair to extract events
     for file,file_ped in file_pairs:
-        data     = open(('data/'+sys.argv[1]+    '/'+file),'r').read()
-        data_ped = open(('data/'+sys.argv[1]+'_ped/'+file),'r').read()
+        data     = open(('data/'+sys.argv[1]+'/'+measurement+    '/'+file),'r').read()
+        data_ped = open(('data/'+sys.argv[1]+'/'+measurement+'_ped/'+file),'r').read()
         
         n_points = int(len(data)/4)    
         n_events = int(n_points/n_samples)
@@ -94,11 +97,13 @@ for folder in folders:
         
         file_count += 1
 
+    measurement_count += 1
+
     # Convert dictionaries to df then pickle
     output_df     = pd.DataFrame.from_dict(output_dict)
     output_df_ped = pd.DataFrame.from_dict(output_dict_ped)
 
     print "Events:", output_df.shape[0]/n_samples
 
-    output_df.to_pickle('data/' + folder + '_' + sys.argv[1]+'_'+sys.argv[2]+'.pkl')
-    output_df_ped.to_pickle('data/' + folder + '_' + sys.argv[1]+'_'+sys.argv[2]+'_ped.pkl')
+    output_df    .to_pickle('data/' + sys.argv[1] + '/' + measurement + '_' + sys.argv[1]+'_'+sys.argv[2]+'.pkl')
+    output_df_ped.to_pickle('data/' + sys.argv[1] + '/' + measurement + '_' + sys.argv[1]+'_'+sys.argv[2]+'_ped.pkl')
