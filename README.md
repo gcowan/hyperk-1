@@ -33,6 +33,12 @@ TekTronix pickle codes for an example.
 It should be possible to read n_samples automatically - either from the LabView
 parameter file, or from the input file directly.
 
+pickle_data_lcwp_dir.py
+This does the same as above, but the <directory> argument concerns a folder
+containing an entire set of measurments. This will loop through this directory
+and output a pickle signal and pedestal file for each sub-folder within - i.e.
+each measurement taken in the run.
+
 make_spectra.py
 WHAT DOES IT DO?
 Takes in a pair of pickle files (signal and pedestal) the calculates the gain
@@ -61,3 +67,4 @@ signals. This is becuase it can't find enough to take a sample of four from.
 This can be solved by changing the limits of subset1, subset2 and subset3. 
 You can also eliminate it entirely, but I wouldn't reccomend this as it's a 
 good indicator of the quality of the data.
+
