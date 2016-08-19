@@ -15,15 +15,15 @@ def print_progress(count, n_events):
     sys.stdout.write("\rPercent: [{0}] {1}%".format(hashes + spaces, int(round(percent * 100))))
     sys.stdout.flush()
 
-# Take filename from terminal input. Assumes <file> pairs with <file>_ped
-data_name     = sys.argv[1] + '_' + sys.argv[2]
-data_ped_name = data_name + '_ped'
+# Take filename from terminal input.
+data_name     = sys.argv[1]
+data_ped_name = sys.argv[2]
 # Match with pickle_data        #TODO: make this automatic
 n_samples = 402
 frameSize = 10.05e-8  # Not actually used in the analysis currently, but can be useful to know
 
-data           = pd.read_pickle('data/' + data_name+'.pkl')
-data_ped       = pd.read_pickle('data/' + data_ped_name+'.pkl')
+data           = pd.read_pickle(data_name + '.pkl')
+data_ped       = pd.read_pickle(data_ped_name + '.pkl')
 
 charge_subset = []
 resistance = 50
@@ -46,8 +46,8 @@ fall_time_in_samples = int(fall_time/dt)
 
 # Define range of integration
 filterTimeRange = True
-lower_time = 40.
-upper_time = 70.
+lower_time = 50.
+upper_time = 80.
 if filterTimeRange:
     data = data[(np.abs(data.filtered_voltage)<90) & (data.time > lower_time) & (data.time < upper_time)]
     data_ped = data_ped[(np.abs(data_ped.filtered_voltage)<90) & (data_ped.time > lower_time) & (data_ped.time < upper_time)]
@@ -72,7 +72,6 @@ diff = diff[diff] # only select the events where the above condition is true
 good_data = data[data.eventID.isin(diff.index)]
 print "Number of good pulses above threshold (-1 mV) is:", len(diff), len(good_data), len(data)
 bad_data = data[-(data.eventID.isin(diff.index))]
-print "Bad data", bad_data.shape[0]
 
 # Restrict the good data to within the time above the threshold. Only integrate in this window
 good_data = good_data[(good_data.time > min_TOT[good_data.eventID]) & (good_data.time < max_TOT[good_data.eventID])]
@@ -93,18 +92,26 @@ axes[0].set_xlabel("time [ns]")
 axes[1].set_xlabel("time [ns]")
 axes[0].set_ylabel("filtered voltage [mV]")
 axes[0].set_ylabel("")
-fig.savefig('plots/' + sys.argv[1] + sys.argv[2] + 'max_voltage_vs_time.png')
+fig.savefig('plots/' + sys.argv[1] + '_' + sys.argv[2] + '_max_voltage_vs_time.png')
 
 # Plot the amplitude of each signal in a histogram
-fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(12, 6), sharey = True)
-axes[0].set_yscale('log')
-axes[1].set_yscale('log')
+fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(12, 6), sharey = True, sharex = True)
 max_voltages['minus_voltage'] = -1*max_voltages['voltage']
 max_voltages_ped['minus_voltage'] = -1*max_voltages_ped['voltage']
 
-max_voltages['minus_voltage']    .hist(histtype='step', bins = 50, color='r', ax = axes[0])
-max_voltages_ped['minus_voltage'].hist(histtype='step', bins = 50, color='r', ax = axes[1])
-fig.savefig('plots/' + sys.argv[1] + sys.argv[2] + 'signal_amplitude_spectrum.png')
+max_voltages['minus_voltage']    .hist(histtype='step', bins = 60, color='r', ax = axes[0])
+max_voltages_ped['minus_voltage'].hist(histtype='step', bins = 60, color='r', ax = axes[1])
+axes[0].set_yscale('log')
+axes[1].set_yscale('log')
+axes[0].set_xlim(-10, 70)
+axes[1].set_xlim(-10, 70)
+axes[0].set_ylim(ymin=0.1)
+axes[1].set_ylim(ymin=0.1)
+axes[0].set_xlabel("max signal amplitude [mV]")
+axes[0].set_ylabel("Entries")
+axes[1].set_xlabel("max signal amplitude [mV]")
+axes[1].set_ylabel("Entries")
+fig.savefig('plots/' + sys.argv[1] + '_' + sys.argv[2] + '_signal_amplitude_spectrum.png')
 
 # Convert the voltage into a collected charge and sum over all voltages in the time window
 scale  = -dt/resistance*1e12/1e3 #for picoColoumbs and to put voltage back in V
@@ -112,7 +119,6 @@ q      = scale*grouped_data     .filtered_voltage.sum()
 q_ped  = scale*grouped_data_ped .filtered_voltage.sum()
 q_good = scale*grouped_data_good.filtered_voltage.sum()
 q_bad  = scale*grouped_data_bad .filtered_voltage.sum()
-print "Q bad", q_bad.shape[0]
 
 # Fit a normal distribution to the pedestal
 from scipy.stats import norm
@@ -125,14 +131,14 @@ print "Calculated mean and standard deviation of the pedestal: %0.3f, %0.3f\n" %
 
 # Plot the spectrum of collected charge
 loC = -1
-hiC =  4.
-nBins = 200
+hiC =  5.
+nBins = 60
 width = float(hiC-loC)/nBins
 fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(12, 6))
 axes[0].set_yscale('log')
 axes[1].set_yscale('log')
 q     .hist(histtype='step', bins = np.arange(loC, hiC + width, width), color='r', ax = axes[0])
-q_good.hist(histtype='step', bins = np.arange(loC, hiC + width, width), color='g', ax = axes[0])
+#q_good.hist(histtype='step', bins = np.arange(loC, hiC + width, width), color='g', ax = axes[0])
 q_ped .hist(histtype='step', bins = np.arange(loC, hiC + width, width), color='b', ax = axes[1])
 
 # uncomment these lines if you want to plot the fitted Gaussian
@@ -143,12 +149,12 @@ q_ped .hist(histtype='step', bins = np.arange(loC, hiC + width, width), color='b
 axes[0].set_xlabel("charge [pC]")
 axes[0].set_ylabel("Entries / (%0.2f pC)" % width)
 axes[0].set_xlim(loC, hiC)
-axes[0].set_ylim(1, 1e4)
+axes[0].set_ylim(0.1, 1e4)
 axes[1].set_xlabel("charge [pC]")
 axes[1].set_ylabel("Entries / (%0.2f pC)" % width)
 axes[1].set_xlim(loC, hiC)
-axes[1].set_ylim(1, 1e4)
-fig.savefig('plots/' + sys.argv[1] + sys.argv[2] + 'charge_spectrum.png')
+axes[1].set_ylim(0.1, 1e4)
+fig.savefig('plots/' + sys.argv[1] + '_' + sys.argv[2] + '_charge_spectrum.png')
 
 # Compute the mean of the collected charge above some threshold (which is defined in terms of the pedestal) to compute the gain
 from math import sqrt
@@ -175,7 +181,7 @@ if len(subset3) > 0:
     grouped_data.get_group(subset3[0]).plot(x='time',y='filtered_voltage',ax=trace_ax, legend=False)
     trace_ax.set_xlabel("time [ns]")
     trace_ax.set_ylabel("voltage [mV]")
-    trace.savefig('plots/' + sys.argv[1] + sys.argv[2] + 'oscilloscope_traces_single.png')
+    trace.savefig('plots/' + sys.argv[1] + '_' + sys.argv[2] + '_oscilloscope_traces_single.png')
 
 if len(subset1) > 0 and len(subset2) > 0 and len(subset3) > 0:
     trace, trace_ax = plt.subplots(nrows=3, ncols=4, sharex=True, sharey=True, figsize=(20, 10))
@@ -209,4 +215,4 @@ if len(subset1) > 0 and len(subset2) > 0 and len(subset3) > 0:
         trace_ax[0,0].set_ylabel("voltage [mV]")
         trace_ax[1,0].set_ylabel("voltage [mV]")
         trace_ax[2,0].set_ylabel("voltage [mV]")
-        trace.savefig('plots/' + sys.argv[1] + sys.argv[2] + 'oscilloscope_traces.png')
+        trace.savefig('plots/' + sys.argv[1] + '_' + sys.argv[2] + '_oscilloscope_traces.png')
