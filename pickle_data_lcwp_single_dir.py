@@ -15,7 +15,7 @@ def filter_signal(data, nSamples = 1000, frameSize = 40e-9):
     return y
 
 # Conversion factors      # Cn:INSPECT?
-vert_gain   = 6.1035e-07   # "VERTICAL_GAIN"
+vert_gain   = float(sys.argv[3]) #6.1035e-07   # "VERTICAL_GAIN"
 vert_offset = -5.700e-2   # "VERTICAL_OFFSET"
 vert_units  = 'V'         # "VERTUNIT"
 horiz_units = 's'         # "HORUNIT"
@@ -27,7 +27,8 @@ frameSize = n_samples*horiz_scale
 print "Frame size:", frameSize
 
 # Read folder names from directory
-measurements = [d for d in os.listdir('' + sys.argv[1] + '/') if (d[0]!='.' and (not (d.endswith('.pkl') or d.endswith('.txt'))))] # Filters out system files
+#measurements = [d for d in os.listdir('' + sys.argv[1] + '/') if (d[0]!='.' and (not (d.endswith('.sh') or d.endswith('.log') or d.endswith('.pkl') or d.endswith('.txt'))))] # Filters out system files
+measurements = [sys.argv[1]]
 print measurements
 n_measurements = len(measurements)
 measurement_count = 1
@@ -48,12 +49,14 @@ for measurement in measurements:
     index = [i * horiz_scale * 1e9 for i in range(n_samples)]  # Convert to ns
 
     # Read filenames from inner directory
-    files     = [x for x in os.listdir('' + sys.argv[1] + '/' + measurement)          if x.endswith(sys.argv[2]+'.txt')]
+    #files     = [x for x in os.listdir('' + sys.argv[1] + '/' + measurement)          if x.endswith(sys.argv[2]+'.txt')]
+    files     = [x for x in os.listdir(measurement)          if x.endswith(sys.argv[2]+'.txt')]
     n_files = len(files)
     file_count = 0
     # Loop through each file_pair to extract events
     for file in files:
-        data     = open((''+sys.argv[1]+'/'+measurement+    '/'+file),'r').read()
+        #data     = open((''+sys.argv[1]+'/'+measurement+    '/'+file),'r').read()
+        data     = open((measurement+    '/'+file),'r').read()
 
         n_points = int(len(data)/4)
         n_events = int(n_points/n_samples)
@@ -87,4 +90,4 @@ for measurement in measurements:
 
     print "Events:", output_df.shape[0]/n_samples
 
-    output_df    .to_pickle('' + sys.argv[1] + '/' + measurement + '_' + sys.argv[2]+'.pkl')
+    output_df    .to_pickle(measurement + '_' + sys.argv[2]+'.pkl')
